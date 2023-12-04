@@ -1,43 +1,45 @@
 from django.db import models
-from  django.contrib.auth.models import AbstractBaseUser
-from  django.contrib.auth.models import PermissionsMixin
-from  django.contrib.auth.models import BaseUserManager
-
+from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.auth.models import PermissionsMixin
+from django.contrib.auth.models import BaseUserManager
 
 class UserProfileManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
+    """Manager for user profiles"""
+
+    def create_user(self, email, name, password=None):
+        """Create a new user profile"""
         if not email:
-            raise ValueError('The Email field must be set')
+            raise ValueError('User must have an email address')
+
         email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+        user = self.model(email=email, name=name)
+
         user.set_password(password)
         user.save(using=self._db)
+
         return user
 
-    def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault('is_staff', True)
-        extra_fields.setdefault('is_superuser', True)
+    def create_superuser(self, email, name, password):
+        """Create and save a new superuser with given details"""
+        user = self.create_user(email, name, password)
 
-        if extra_fields.get('is_staff') is not True:
-            raise ValueError('Superuser must have is_staff=True.')
-        if extra_fields.get('is_superuser') is not True:
-            raise ValueError('Superuser must have is_superuser=True.')
+        user.is_superuser = True
+        user.is_staff = True
+        user.save(using=self._db)
 
-        return self.create_user(email, password, **extra_fields)
+        return user
 
-
-
-class UserProfile(AbstractBaseUser,PermissionsMixin):
+class UserProfile(AbstractBaseUser, PermissionsMixin):
     """Database model for users in the system"""
-    email = models.EmailField(max_length=255,unique=True)
+    email = models.EmailField(max_length=255, unique=True)
     name = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
 
-    objects =  UserProfileManager()
+    objects = UserProfileManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELD = ['name']
+    REQUIRED_FIELDS = ['name']
 
     def get_full_name(self):
         """Retrieve full name of user"""
@@ -48,5 +50,5 @@ class UserProfile(AbstractBaseUser,PermissionsMixin):
         return self.name
 
     def __str__(self):
-        """Return string representaion of our user"""
-        return str(self.name)
+        """Return string representation of our user"""
+        return self.email
